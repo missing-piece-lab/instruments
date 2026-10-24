@@ -24,6 +24,8 @@ integer), `cwd` (relative to the manifest), `timeout`, `every` (`daily` or `6h`:
 `contradicts` (`{false: [live, up], true: [down]}`: words a document cannot use about the subject when the claim fails /
 holds). Three example manifests sit in `examples/`; this repo carries its own `CLAIMS.yml` at the root.
 
+**Probes run as trusted shell — run only manifests you wrote.** A CLAIMS.yml is code.
+
 ## Design decisions, dated
 
 - **Probes return booleans, short values and counts — never contents** (2026-09-20). STATE is meant to be shareable; a

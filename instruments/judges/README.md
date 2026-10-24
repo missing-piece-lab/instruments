@@ -5,7 +5,7 @@
 **What it is.** A branch's diff, its commits, the project's rules and a few deterministic code checks go to two judges from
 two labs, each in a fresh context with no memory of writing the change. MERGE only when both say MERGE; a split is a HOLD
 with the split named; a judge that cannot answer leaves the read on the other and the file says so. Every read lands as a
-markdown file (`<date>-<branch>-<sha12>.md`) plus one ledger row that names the exact commit it read. When one judge cannot
+markdown file (`<date>-<time>-<branch>-<sha12>.md`) plus one ledger row that names the exact commit it read. When one judge cannot
 answer, the other's verdict stands and the file and the row both say so — "MERGE only when both say MERGE" is the rule for
 two answers, not a promise that there will always be two.
 

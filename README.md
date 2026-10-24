@@ -48,5 +48,3 @@ Kevin, the human. Ariah, the AI collaborator.
 ## License
 
 MIT, copyright 2026 Kevin and Ariah. See [LICENSE](LICENSE).
-
-The essay and the record follow.

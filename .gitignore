@@ -5,3 +5,8 @@ __pycache__/
 *.tmp
 pulse-out/
 private-words
+pulse.log
+reviews/
+ledger.jsonl
+LEDGER.md
+.inflight-*

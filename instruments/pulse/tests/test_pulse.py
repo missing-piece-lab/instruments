@@ -104,7 +104,7 @@ def test_judge_through_the_door_and_the_wall():
     # the door fails: no read, the reason in meta, never the key or the body
     REPLY["status"] = 500; _, d2 = P.pulse(cfg, day, rejudge=True)
     assert d2["judge"]["register"] == 6, "the earlier read stays when a re-read fails"
-    assert d2["judge_meta"]["error"].endswith("HTTP 500") and "echo" not in d2["judge_meta"]["error"] and KEY not in json.dumps(d2)
+    assert d2["judge_meta"]["error"] == "HTTP 500 from the judge door" and "127.0.0.1" not in d2["judge_meta"]["error"] and KEY not in json.dumps(d2)
     REPLY.clear(); REPLY["content"] = "I cannot say."; _, d3 = P.pulse(cfg, day, rejudge=True); assert "no verdict" in d3["judge_meta"]["error"]
     # unconfigured: skipped, nothing sent
     REPLY.clear(); REPLY["json"] = {"verdict": "partly"}; cfg["judge"]["model"] = ""; n = len(HITS)

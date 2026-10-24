@@ -1,7 +1,7 @@
 """judges — two fake doors (an Anthropic-shaped one and an OpenAI-shaped one, http.server on loopback), a temp git repo,
 every outcome of the pair, the ledger, holds per round, the in-flight marker, head lag, the walls, the CLI.
 Run: python tests/test_judges.py (or pytest)."""
-import importlib.util, json, os, subprocess, sys, tempfile, threading, time
+import importlib.util, json, os, re, subprocess, sys, tempfile, threading, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -81,7 +81,7 @@ def test_both_merge_writes_file_and_ledger():
     assert "## Your ledger" in first_user and "no ledger yet" in first_user and "## Your ledger" not in second_user, "the second judge never sees the first's ledger"
     assert "state is observed" in first_user and "+x = 2" in first_user and f"head {head(r)}" in first_user and second_user.count("## ") == first_user.count("## ") - 1
     assert HITS[1]["body"]["response_format"] == {"type": "json_object"} and "verdict" in HITS[1]["body"]["messages"][0]["content"]
-    files = [f for f in os.listdir(out) if f.endswith(f"-feature-{head(r)[:12]}.md")]; assert len(files) == 1, os.listdir(out)
+    files = [f for f in os.listdir(out) if f.endswith(f"-feature-{head(r)[:12]}.md")]; assert len(files) == 1 and re.fullmatch(r"\d{4}-\d\d-\d\d-\d{6}-feature-[0-9a-f]{12}\.md", files[0]), os.listdir(out)
     text = open(os.path.join(out, files[0])).read()
     assert text.startswith("# Cold read — `feature` → `main` · MERGE") and f"- head {head(r)}" in text and "agreement: full" in text
     assert "claude-test (anthropic) → MERGE" in text and "gpt-test (openai) → MERGE" in text and "## Second judge" in text
@@ -112,7 +112,12 @@ def test_split_is_hold_and_the_wall_holds():
     assert "(you could not answer)" in J.ledger_tail(out).splitlines()[-1] and "HOLD" not in J.ledger_tail(out).splitlines()[-1], "the first judge's ledger never carries the second's vote"
     reset(first_status=500, second_status=503); subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "nudge4"], check=True)
     try: J.review("feature", r, "main", [], out); raise AssertionError("read with no judge")
-    except RuntimeError as e: assert "neither judge answered" in str(e) and KEY1 not in str(e)
+    except RuntimeError as e: assert "neither judge answered" in str(e) and KEY1 not in str(e) and "127.0.0.1" not in str(e), "never the key, never the door's address"
+    # one-judge mode and that judge is down: could not read, no crash
+    os.environ["JUDGES_SECOND_MODEL"] = ""; reset(first_status=500); subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "nudge4b"], check=True)
+    try: J.review("feature", r, "main", [], out); raise AssertionError("read with the only judge down")
+    except RuntimeError as e: assert "the only judge could not answer" in str(e)
+    os.environ["JUDGES_SECOND_MODEL"] = "gpt-test"
     # one judge only
     os.environ["JUDGES_SECOND_MODEL"] = ""; reset(); subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "nudge5"], check=True)
     assert J.review("feature", r, "main", [], out) == "MERGE" and [h["which"] for h in HITS] == ["first"] and J.ledger_rows(out)[-1]["agreement"] == "single"
@@ -122,8 +127,9 @@ def test_split_is_hold_and_the_wall_holds():
 def test_holds_per_round_and_the_brake():
     r, out, g = repo(); reset(first="HOLD", second="HOLD")
     assert J.review("feature", r, "main", [], out) == "HOLD"
-    # the same commit read twice (the marker was cleared between): still one round, and two files (the sha is in the name, the ledger has two rows)
+    # the same commit read twice (the marker was cleared between): still one round; two rows, two files (the time is in the name, and a same-second read gets a suffix)
     assert J.review("feature", r, "main", [], out) == "HOLD" and J.hold_rounds(out, "feature") == 1 and len(J.ledger_rows(out)) == 2
+    assert len([f for f in os.listdir(out) if f.endswith(".md")]) == 2, os.listdir(out)
     subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "fix attempt"], check=True)
     assert J.review("feature", r, "main", [], out) == "HOLD" and J.hold_rounds(out, "feature") == 2
     subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "third"], check=True); n = len(HITS)
@@ -166,6 +172,8 @@ def test_cli_and_status():
     assert x.returncode == 1 and x.stdout.startswith("could not read:") and "git fetch --unshallow" in x.stdout and "Traceback" not in x.stderr, x.stdout + x.stderr
     x = subprocess.run(py + ["read", "feature", "--repo", r, "--out", out, "--base", "main", "--head", "0" * 40], capture_output=True, text=True); assert x.returncode == 4 and "NOT READ" in x.stdout
     l = subprocess.run(py + ["ledger", "--out", out], capture_output=True, text=True); assert l.stdout.count("\n") == 2 and "→ HOLD (split)" in l.stdout
+    reset(first_status=500, second="MERGE"); subprocess.run(py + ["read", "feature", "--repo", r, "--out", out, "--base", "main"], capture_output=True, text=True)
+    l = subprocess.run(py + ["ledger", "--out", out], capture_output=True, text=True); assert l.returncode == 0 and l.stdout.count("\n") == 3 and "—     → MERGE (unavailable)" in l.stdout, l.stdout + l.stderr
     env = {k: v for k, v in os.environ.items() if k != "JUDGES_FIRST_MODEL"}
     x = subprocess.run(py + ["read", "feature", "--repo", r, "--out", out], capture_output=True, text=True, env=env); assert x.returncode == 1 and "JUDGES_FIRST_MODEL" in x.stdout
 

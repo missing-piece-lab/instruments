@@ -233,7 +233,7 @@ def call_judge(cfg, day, desc, msgs):
         with urllib.request.urlopen(req, timeout=int(j["timeout"])) as r:
             raw = r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
-        return None, {"error": f"{base} answered HTTP {e.code}"}              # never the body: an error body can echo the request
+        return None, {"error": f"HTTP {e.code} from the judge door"}       # never the body (it can echo the request), never the address
     except Exception as e:
         return None, {"error": f"unreachable: {str(getattr(e, 'reason', None) or e)[:120]}"}
     try:

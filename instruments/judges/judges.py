@@ -99,7 +99,7 @@ def call(spec, brief):
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             out = json.loads(r.read().decode("utf-8", "replace"))
     except urllib.error.HTTPError as e:
-        return None, {}, f"{spec['base']} answered HTTP {e.code}"
+        return None, {}, f"HTTP {e.code} from the judge door"
     except Exception as e:
         return None, {}, f"unreachable: {str(getattr(e, 'reason', None) or e)[:120]}"
     try:
@@ -146,7 +146,9 @@ def strip_ledger(brief):
 def combine(first, second):
     """→ (final verdict, agreement, note). One judge → its verdict, "single". Both answered: MERGE only when both say MERGE,
     any split = HOLD with the split named. One could not answer → the other's verdict stands, "unavailable", the reason noted."""
-    if first["error"] and second and second["error"]:
+    if first["error"] and not second:
+        raise RuntimeError(f"the only judge could not answer — {first['error']}")
+    if first["error"] and second["error"]:
         raise RuntimeError(f"neither judge answered — first: {first['error']}; second: {second['error']}")
     if first["error"]:
         return second["verdict"], "unavailable", f"first judge unavailable — {first['error']}"
@@ -270,7 +272,8 @@ def read_review(path):
 
 def last_read(out, label):
     import glob
-    files = sorted(glob.glob(os.path.join(out, f"????-??-??-{label}-" + "?" * 12 + ".md")), key=os.path.getmtime)
+    files = sorted(glob.glob(os.path.join(out, f"????-??-??-??????-{label}-" + "?" * 12 + "*.md")),
+                   key=lambda f: (os.path.basename(f)[:17], os.path.getmtime(f)))        # the date-time in the name, then mtime inside one second
     return read_review(files[-1]) if files else None
 
 
@@ -332,7 +335,10 @@ def _read(ref, base, label, sha, brief, checks, first, second, out, read_fn):
     b = read_fn(second, strip_ledger(brief)) if second["model"] else None     # new context, nothing of the first judge in it
     final, agreement, note = combine(a, b)
     now = datetime.now(timezone.utc); os.makedirs(out, exist_ok=True)
-    path = os.path.join(out, f"{now.strftime('%Y-%m-%d')}-{label}-{sha[:12]}.md")       # the sha: two reads of one branch on one day never overwrite
+    stem = os.path.join(out, f"{now.strftime('%Y-%m-%d-%H%M%S')}-{label}-{sha[:12]}")   # date, time and sha: no two reads share a name
+    path, n = stem + ".md", 1
+    while os.path.exists(path):
+        n += 1; path = f"{stem}-{n}.md"
     judges = [{"model": j["model"], "lab": j["lab"], "verdict": j["verdict"], "error": j["error"]} for j in (a, b) if j]
     def section(j, title):
         if not j:
@@ -377,7 +383,7 @@ def main(argv):
     repo, out = opt("--repo", "."), opt("--out", "reviews")
     if argv[0] == "ledger":
         for r in ledger_rows(out)[-(int(argv[1]) if len(argv) > 1 and argv[1].isdigit() else 20):]:
-            print(f"{r['ts']}  {r['ref']:30} {r['head'][:12]}  {r['verdict']:5} → {r['final']} ({r['agreement']})" + (f" — {r['note']}" if r.get("note") else ""))
+            print(f"{r['ts']}  {r['ref']:30} {r['head'][:12]}  {(r['verdict'] or '—'):5} → {r['final']} ({r['agreement']})" + (f" — {r['note']}" if r.get("note") else ""))
         return 0
     if len(argv) < 2:
         print(__doc__); return 1
