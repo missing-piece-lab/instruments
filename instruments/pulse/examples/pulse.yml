@@ -3,7 +3,7 @@ identity: identity.md            # the prompt the agent reads before the human s
 transcripts: transcripts         # one *.jsonl per session: {"ts": iso, "role": "assistant" | "user", "text": "..."}
 out: pulse-out                   # one JSON per day lands here — the agent never reads this directory
 log: pulse.log                   # says that a read happened, never what it said
-tz: America/Chicago              # the human's day, not UTC's
+tz: UTC                          # the human's day: set their zone, e.g. Europe/Lisbon
 dated_line: 'Week of (\d{4}-\d{2}-\d{2})'   # the identity's dated line, if it has one; its age is a substrate number
 markers:
   honesty: ["couldn't verify", "not verified", "untested", "I don't know", "I was wrong", "not sure", "didn't check", "I missed"]

@@ -2,43 +2,44 @@
 # open rows: id · asked · what · line · door (one-way | two-way) · by · default (two-way only) · recommend · source · research
 # two-way: the default is owed when `by` passes (the row shows OVERDUE; `decide <id> default` records it). one-way: waits, never defaults.
 # Partly machine-written: ledger.py rewrites this file on every decide/close, so comments below this header do not survive.
+# (An example. The dates are placeholders; the rows are the shape, not a record.)
 open:
-- id: identity-rewrite
-  asked: 2026-10-20
-  what: let the agent rewrite its own identity file's "how we work" section (it touches who the agent is — a one-way door)
+- id: example-one-way
+  asked: 2026-01-05
+  what: let the agent rewrite a section of its own identity file (it touches who the agent is — a one-way door)
   line: say "yes, rewrite it" or "no"
   door: one-way
-  by: 2026-10-27
+  by: 2026-01-12
   recommend: yes, with the diff read cold by both judges first
-  source: the weekly review, 2026-10-20
-- id: lock-fix-merge
-  asked: 2026-10-21
-  what: merge the scheduler lock fix (both judges said MERGE)
+  source: the weekly review
+- id: example-two-way
+  asked: 2026-01-06
+  what: merge the fix both judges said MERGE on
   line: say merge, or merge it yourself
   door: two-way
-  by: 2026-10-28
-  default: merge through the lane and restart the scheduler
-  recommend: merge; the test covers the timeout path that bit us twice
-  source: the cold read of 2026-10-21
-- id: second-judge-model
-  asked: 2026-10-22
-  what: which model sits in the second judge's seat for November (a spend — one-way)
+  by: 2026-01-13
+  default: merge through the lane and restart the service
+  recommend: merge; the new test covers the path that failed
+  source: the cold read
+- id: example-with-research
+  asked: 2026-01-07
+  what: which model sits in the second judge's seat next month (a spend — one-way)
   line: name the model
   door: one-way
-  by: 2026-11-01
-  recommend: keep the current one; its split rate against the first judge is the useful kind
-  source: the ledger's October rows
+  by: 2026-02-01
+  recommend: keep the current one
+  source: the ledger's rows
   research:
-    asked: 2026-10-23
-    question: how often did the second judge split from the first in October, and was the split right?
+    asked: 2026-01-08
+    question: how often did the second judge split from the first last month, and was the split right?
     status: pending
 closed:
-- id: review-rules-v2
-  asked: 2026-10-14
+- id: example-closed
+  asked: 2026-01-01
   what: adopt the four review rules as the lane's rules file
   line: say yes
   door: two-way
-  by: 2026-10-18
+  by: 2026-01-04
   default: adopt them
-  decided: 2026-10-17
-  outcome: yes — 10-17
+  decided: 2026-01-03
+  outcome: yes — 1-03

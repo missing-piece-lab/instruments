@@ -184,7 +184,7 @@ def ledger_tail(out, n=15):
     rows = ledger_rows(out)[-n:]
     if not rows:
         return "(no ledger yet — this is the first read on this lane)"
-    return "\n".join(f"- {r['ts'][:10]} {r['ref']} → {r['verdict']}" + (f" — {r['note']}" if r.get("note") else "") for r in rows)
+    return "\n".join(f"- {r['ts'][:10]} {r['ref']} → {r['verdict'] or '(you could not answer)'}" + (f" — {r['note']}" if r.get("note") else "") for r in rows)
 
 
 def ledger_append(out, row):
@@ -195,7 +195,7 @@ def ledger_append(out, row):
     md = ["# The judges' ledger", f"*{len(rows)} read(s) · {sum(1 for r in rows if r['final'] == 'HOLD')} held · machine-written after every cold read*", "",
           "| date | ref · head | first judge | final | the one line | read, in order |", "|---|---|---|---|---|---|"]
     for r in reversed(rows[-60:]):
-        md.append(f"| {r['ts'][:16]}Z | {r['ref']} · {r['head'][:12]} | {r['verdict']} | {r['final']} ({r['agreement']}) | "
+        md.append(f"| {r['ts'][:16]}Z | {r['ref']} · {r['head'][:12]} | {r['verdict'] or '—'} | {r['final']} ({r['agreement']}) | "
                   f"{(r.get('note') or '').replace('|', '/')[:160]} | {(r.get('trace') or '').replace('|', '/')[:200]} |")
     open(os.path.join(out, "ledger", "LEDGER.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
 
@@ -270,7 +270,7 @@ def read_review(path):
 
 def last_read(out, label):
     import glob
-    files = sorted(glob.glob(os.path.join(out, f"????-??-??-{label}.md")))
+    files = sorted(glob.glob(os.path.join(out, f"????-??-??-{label}-" + "?" * 12 + ".md")), key=os.path.getmtime)
     return read_review(files[-1]) if files else None
 
 
@@ -332,7 +332,7 @@ def _read(ref, base, label, sha, brief, checks, first, second, out, read_fn):
     b = read_fn(second, strip_ledger(brief)) if second["model"] else None     # new context, nothing of the first judge in it
     final, agreement, note = combine(a, b)
     now = datetime.now(timezone.utc); os.makedirs(out, exist_ok=True)
-    path = os.path.join(out, f"{now.strftime('%Y-%m-%d')}-{label}.md")
+    path = os.path.join(out, f"{now.strftime('%Y-%m-%d')}-{label}-{sha[:12]}.md")       # the sha: two reads of one branch on one day never overwrite
     judges = [{"model": j["model"], "lab": j["lab"], "verdict": j["verdict"], "error": j["error"]} for j in (a, b) if j]
     def section(j, title):
         if not j:
@@ -348,24 +348,25 @@ def _read(ref, base, label, sha, brief, checks, first, second, out, read_fn):
             + f"\n- agreement: {agreement}" + (f" — {note}" if note and agreement != "split" else "") + "\n\n## Code checks\n" + "\n".join(f"- {c}" for c in checks) + "\n"
             + section(a, "First judge") + section(b, "Second judge (the same brief without the ledger)"))
     open(path, "w", encoding="utf-8").write(text)
-    own = a if not a["error"] else b                                        # the ledger's `verdict`/`note` are the first judge's own; `final` is the combined one
-    ledger_append(out, {"ts": now.strftime("%Y-%m-%dT%H:%M"), "ref": ref, "label": label, "head": sha, "verdict": own["verdict"], "model": own["model"],
-                        "note": first_line(own["d"].get("review"), own["verdict"]), "trace": own["d"].get("trace", ""), "usage": own["usage"],
-                        "file": path, "final": final, "judges": judges, "agreement": agreement})
+    ad = a["d"] or {}                                                        # the ledger's `verdict`/`note` are the first judge's own (None when it could not answer); `final` is the combined one
+    ledger_append(out, {"ts": now.strftime("%Y-%m-%dT%H:%M"), "ref": ref, "label": label, "head": sha, "verdict": a["verdict"], "model": a["model"],
+                        "note": first_line(ad.get("review"), a["verdict"]) if a["verdict"] else (a["error"] or ""), "trace": ad.get("trace", ""), "usage": a["usage"],
+                        "second_verdict": b["verdict"] if b else None, "file": path, "final": final, "judges": judges, "agreement": agreement})
     print(f"{final} — {ref}" + (f"\n\n{note}" if note else "") + "\n\n" + "\n".join(f"{j['model']} ({j['lab']}) → {j['verdict'] or j['error']}" for j in judges)
           + (f"\n\n{a['d']['review']}" if a["d"] else "") + f"\n\n→ {path}")
     return final
 
 
 def status(ref, repo=".", out="reviews"):
+    """Exit 0 = the branch's current commit was read and said MERGE · 2 = read here, said HOLD · 4 = unread here (no read, or the branch moved)."""
     rv = last_read(out, ref.replace("/", "-"))
     if not rv:
-        print(f"{ref}: no read yet"); return 2
+        print(f"{ref}: no read yet"); return 4
     sha = sh(["git", "rev-parse", ref], cwd=repo).strip()
     cur = rv["head"] == sha
     print(f"{ref}: last read {rv['verdict']} at {(rv['head'] or 'no commit')[:12]} ({os.path.basename(rv['file'])}) — "
           + ("the branch still sits on that commit" if cur else f"the branch moved to {sha[:12]}: unread, read it again"))
-    return 0 if cur and rv["verdict"] == "MERGE" else 2
+    return (0 if rv["verdict"] == "MERGE" else 2) if cur else 4
 
 
 def main(argv):
@@ -395,7 +396,9 @@ def main(argv):
     except NotRead as e:
         print(f"NOT READ: {e}"); return 4
     except RuntimeError as e:
-        print(f"could not read: {e}"); return 1
+        hint = " — a shallow or partial clone cannot see the base: git fetch --unshallow, and make sure the base branch exists locally" \
+            if re.search(r"merge-base|unknown revision|bad revision|ambiguous argument|shallow", str(e), re.I) else ""
+        print(f"could not read: {e}{hint}"); return 1
     return 0 if v in (None, "MERGE") else 2
 
 

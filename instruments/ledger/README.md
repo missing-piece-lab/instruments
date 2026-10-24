@@ -24,7 +24,8 @@ python ledger.py decide pr-9 default                                        # a 
 ```
 
 A row: `id · asked · what · line · door · by · default · recommend · source`, plus `research` once a question is on it.
-Writes take a file lock, so two doors (a chat command and a web page, say) can share the file.
+Every write (`decide`, `close`) takes a file lock, so two doors (a chat command and a web page, say) can share the file.
+Unix-only for now: the lock is `fcntl`.
 
 ## Design decisions, dated
 

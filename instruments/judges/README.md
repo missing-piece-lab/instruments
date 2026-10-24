@@ -5,7 +5,9 @@
 **What it is.** A branch's diff, its commits, the project's rules and a few deterministic code checks go to two judges from
 two labs, each in a fresh context with no memory of writing the change. MERGE only when both say MERGE; a split is a HOLD
 with the split named; a judge that cannot answer leaves the read on the other and the file says so. Every read lands as a
-markdown file plus one ledger row that names the exact commit it read.
+markdown file (`<date>-<branch>-<sha12>.md`) plus one ledger row that names the exact commit it read. When one judge cannot
+answer, the other's verdict stands and the file and the row both say so — "MERGE only when both say MERGE" is the rule for
+two answers, not a promise that there will always be two.
 
 **Why it exists.** On 2026-09-20 the human opened a fresh session to review a branch the agent had written and it caught
 the one thing the author would have glossed over — a second mind with no stake in the change landing. Making that a lane
@@ -16,14 +18,18 @@ the agent can run on its own work turned the human from the approval step into t
 ```
 source examples/judges.env.example                 # or export the same names; keys are read from the env, never printed
 python judges.py read feature/x --repo ~/code/app --base main --rules REVIEW-RULES.md --out ~/code/app-reviews
-python judges.py status feature/x --repo ~/code/app --out ~/code/app-reviews    # exit 0 = read MERGE at the branch's current commit
+python judges.py status feature/x --repo ~/code/app --out ~/code/app-reviews    # 0 = read MERGE at this commit · 2 = read HOLD here · 4 = unread here
 python judges.py ledger 20 --out ~/code/app-reviews
 ```
 
-Exit codes: `0` MERGE · `2` HOLD · `1` could not read · `4` not read (head lag, a read in flight, or two holds already).
+Exit codes for `read`: `0` MERGE · `2` HOLD · `1` could not read · `4` not read (head lag, a read in flight, or two holds
+already). `status` exits `0` only when the branch's current commit was read and said MERGE. A shallow clone cannot find a
+merge base: the tool says so in one line (`git fetch --unshallow`) rather than a traceback.
 The first judge is the Anthropic Messages API by default; the second is any `/chat/completions`-compatible door (another
-lab directly, or a router). `kind`, base URL, model and key are env per judge. Nothing here fetches or merges: fetch
-before, and let your merge step call `status` so it merges only the commit that was read.
+lab directly, or a router). `kind`, base URL, model and key are env per judge. **Two labs is recorded, not enforced:** the
+ledger names each judge's lab from its model name, and the file shows it; the tool does not refuse a same-lab pair or a
+router alias it cannot place, because the human reading the ledger is the better judge of that. Nothing here fetches or
+merges: fetch before, and let your merge step call `status` so it merges only the commit that was read.
 
 ## Design decisions, dated
 

@@ -115,9 +115,18 @@ def test_cli_dry_run_writes_nothing():
     tmp, cfg, today = world(); day = today - timedelta(days=1); transcripts(cfg, day)
     env = dict(os.environ); env.pop("PULSE_JUDGE_API_KEY")
     r = subprocess.run([sys.executable, os.path.join(ROOT, "pulse.py"), "--config", os.path.join(tmp, "pulse.yml"), "--day", day.isoformat(), "--dry-run"], capture_output=True, text=True, env=env)
-    assert r.returncode == 0 and r.stdout.startswith(day.isoformat()) and "judge: —" in r.stdout and not os.path.exists(cfg["out"]), r.stdout + r.stderr
+    assert r.returncode == 0 and r.stdout.startswith(day.isoformat()) and "judge: —" in r.stdout and not os.path.exists(cfg["out"]) and not os.path.exists(cfg["log"]), r.stdout + r.stderr
     r = subprocess.run([sys.executable, os.path.join(ROOT, "pulse.py"), "--config", os.path.join(tmp, "pulse.yml"), "--day", day.isoformat(), "--no-judge"], capture_output=True, text=True, env=env)
-    assert r.returncode == 0 and os.path.exists(os.path.join(cfg["out"], f"{day}.json")), r.stderr
+    assert r.returncode == 0 and os.path.exists(os.path.join(cfg["out"], f"{day}.json")) and os.path.exists(cfg["log"]), r.stderr
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "pulse.py"), "--config", os.path.join(tmp, "pulse.yml"), "--day", day.isoformat(), "--backfill", "3", "--no-judge"], capture_output=True, text=True, env=env)
+    assert r.returncode == 0 and r.stdout.count("\n") == 3 and os.path.exists(os.path.join(cfg["out"], f"{day - timedelta(days=2)}.json")) and not os.path.exists(os.path.join(cfg["out"], f"{day - timedelta(days=3)}.json")), "--backfill N = N days"
+    # a shallow clone: the identity is read from the working tree, with one line saying why
+    d = os.path.dirname(cfg["identity"]); subprocess.run(["git", "-C", d, "init", "-q"], check=True)
+    subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "old"], check=True, env=dict(os.environ, GIT_AUTHOR_DATE=f"{day - timedelta(days=5)}T12:00:00", GIT_COMMITTER_DATE=f"{day - timedelta(days=5)}T12:00:00"))
+    subprocess.run(["git", "-C", d, "add", "-A"], check=True); subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "now"], check=True)
+    shallow = os.path.join(tmp, "shallow"); subprocess.run(["git", "clone", "-q", "--depth", "1", "file://" + d, shallow], check=True, capture_output=True)
+    cfg2 = dict(cfg, identity=os.path.join(shallow, "identity.md"))
+    assert P.substrate(cfg2, day - timedelta(days=2))["rev"] == "worktree"
 
 
 def test_example_config_loads():

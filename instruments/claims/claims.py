@@ -47,8 +47,12 @@ def discover(root):
                 raise ValueError("expected a mapping with a `claims:` list")
             d.setdefault("project", name); d.setdefault("claims", []); d["_file"] = f
             out.append(d)
+        except yaml.YAMLError as e:
+            mark = getattr(e, "problem_mark", None)
+            where = f" at line {mark.line + 1}" if mark is not None else ""
+            out.append({"project": name, "_file": f, "_error": f"{f} is not valid YAML{where}: {getattr(e, 'problem', None) or 'parse error'}", "claims": []})
         except Exception as e:
-            out.append({"project": name, "_file": f, "_error": str(e)[:120], "claims": []})
+            out.append({"project": name, "_file": f, "_error": f"{f}: {str(e)[:100]}", "claims": []})
     return out
 
 
@@ -65,6 +69,8 @@ def run_probe(c, manifest_dir):
         return None, "probe timed out"
     except Exception as e:
         return None, str(e)[:80]
+    if kind in ("value", "count") and r.returncode != 0:
+        return None, f"exit {r.returncode}"                    # a value from a failed command is not a value
     if kind == "value":
         lines = (r.stdout or "").strip().splitlines()
         return (lines[0][:60] if lines else ""), None
@@ -128,7 +134,7 @@ def evaluate(manifests, out_dir, only=None, project=None, fresh=False):
             if c.get("contradicts"):
                 entry["contradicts"] = {str(k).lower(): list(v) for k, v in c["contradicts"].items()}   # yaml reads true:/false: as booleans
             if c.get("subject"):
-                entry["subject"] = list(c["subject"])
+                entry["subject"] = [c["subject"]] if isinstance(c["subject"], str) else list(c["subject"])
             if c.get("expect") is not None:
                 entry["expect"] = c["expect"]; entry["ok"] = (v == c["expect"]) if v is not None else None
             p["claims"].append(entry)
@@ -224,7 +230,11 @@ def main(argv):
         return argv[argv.index(k) + 1] if k in argv and argv.index(k) + 1 < len(argv) else d
     root = opt("--root", "."); out_dir = opt("--out", os.path.join(root, "state"))
     only, project, fresh = opt("--only"), opt("--project"), "--fresh" in argv
-    state = evaluate(discover(root), out_dir, only=only, project=project, fresh=fresh)
+    manifests = discover(root)
+    for m in manifests:
+        if m.get("_error"):
+            print(f"claims: {m['_error']}", file=sys.stderr)
+    state = evaluate(manifests, out_dir, only=only, project=project, fresh=fresh)
     if opt("--docs"):
         check_docs(state, opt("--docs"))
     if only or project or "--print" in argv:

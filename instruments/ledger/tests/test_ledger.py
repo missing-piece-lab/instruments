@@ -77,7 +77,7 @@ def test_file_roundtrip_and_cli():
 
 def test_example_ledger_is_well_formed():
     d = L.load(os.path.join(ROOT, "examples", "decisions.yml"))
-    assert len(d["open"]) >= 2 and L.problems(d, date(2026, 10, 24)) == [] and L.lines(d, date(2026, 10, 24))
+    assert len(d["open"]) >= 2 and L.problems(d, date(2026, 1, 10)) == [] and L.lines(d, date(2026, 1, 10))   # the example dates are placeholders: check it on a day inside them
 
 
 if __name__ == "__main__":

@@ -28,8 +28,8 @@ holds). Three example manifests sit in `examples/`; this repo carries its own `C
 
 - **Probes return booleans, short values and counts — never contents** (2026-09-20). STATE is meant to be shareable; a
   probe that printed rows would make it a leak. `value` keeps the first line, cut at 60 characters.
-- **Unknown is not false** (2026-09-20). A probe that times out, has no cwd, or cannot run is `？`, not `❌`. A red mark
-  means the thing was checked and is not so.
+- **Unknown is not false** (2026-09-20). A probe that times out, has no cwd, or cannot run is `？`, not `❌`; a `value` or
+  `count` probe that exits non-zero is unknown too, whatever it printed. A red mark means the thing was checked and is not so.
 - **`every:` holds** (2026-09-24). One claim probed an API with a daily request cap; probed hourly, it spent the cap by
   noon. A claim may say how often it is worth probing; the runner holds the last observation in between and marks it
   `held`. A held *unknown* is never reused.

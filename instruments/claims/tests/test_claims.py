@@ -21,7 +21,7 @@ claims:
     says: the marker file exists
     probe: test -f marker
     cwd: sub
-    subject: [marker]
+    subject: marker
     contradicts: {false: [present, live]}
   - id: service-up
     says: the service answers
@@ -53,6 +53,10 @@ claims:
     says: a probe that shells back into the runner must not go red
     probe: python3 {claims} --root . --out state >/dev/null
     cwd: .
+  - id: failed-value
+    says: a value from a command that failed is unknown
+    probe: echo oops; exit 3
+    kind: value
   - id: expensive
     says: a probe held per day
     probe: date +%s%N
@@ -60,6 +64,7 @@ claims:
     every: daily
 """.replace("{claims}", os.path.join(ROOT, "claims.py")))
     open(os.path.join(b, "CLAIMS.yml"), "w").write("project: beta\nclaims: not-a-list\n")
+    os.makedirs(os.path.join(tmp, "gamma")); open(os.path.join(tmp, "gamma", "CLAIMS.yml"), "w").write("project: gamma\nclaims:\n  - id: x\n   says: [unclosed\n")
     open(os.path.join(docs, "notes.md"), "w").write("# notes\n\nThe service is live and up since Tuesday.\n\nThe marker is present.\n\nnothing about either here: live.\n\nThe gate is LIVE 9-19.\n")
     return tmp, a, b, docs
 
@@ -72,7 +77,7 @@ def by_id(state, project="alpha"):
 def test_probes_of_every_kind():
     tmp, a, b, docs = world()
     st = C.evaluate(C.discover(tmp), os.path.join(tmp, "state"))
-    assert [p["project"] for p in st["projects"]] == ["alpha", "beta"]
+    assert [p["project"] for p in st["projects"]] == ["alpha", "beta", "gamma"]
     c = by_id(st)
     assert c["marker-present"]["value"] is True and c["service-up"]["value"] is False
     assert c["version"]["value"] == "1.4.2" and c["rows"]["value"] == 42
@@ -81,8 +86,12 @@ def test_probes_of_every_kind():
     assert c["nowhere"]["value"] is None and "no such cwd" in c["nowhere"]["note"]
     assert c["nested"]["value"] is True, "the inner run exits 0 and prints that it skipped"
     assert c["marker-present"]["contradicts"] == {"false": ["present", "live"]}, "yaml booleans become the strings true/false"
+    assert c["marker-present"]["subject"] == ["marker"], "a bare string subject is one subject, not its letters"
+    assert c["failed-value"]["value"] is None and c["failed-value"]["note"] == "exit 3"
     beta = next(p for p in st["projects"] if p["project"] == "beta")
-    assert "claims: list" in beta["error"] or "mapping" in beta["error"], beta
+    assert beta["error"].startswith(beta["file"]) and "mapping" in beta["error"], beta
+    gamma = next(p for p in st["projects"] if p["project"] == "gamma")
+    assert "is not valid YAML at line 4" in gamma["error"] and gamma["error"].startswith(gamma["file"]), gamma["error"]
 
 
 def test_every_holds_between_runs():
@@ -126,7 +135,8 @@ def test_cli_writes_state_and_guards_nesting():
     out = os.path.join(tmp, "st")
     env = {k: v for k, v in os.environ.items() if k != "CLAIMS_RUNNING"}
     r = subprocess.run([sys.executable, os.path.join(ROOT, "claims.py"), "--root", tmp, "--out", out, "--docs", docs], capture_output=True, text=True, env=env)
-    assert r.returncode == 0 and "9 probed" in r.stdout and "docs drift 1" in r.stdout, r.stdout + r.stderr
+    assert r.returncode == 0 and "10 probed" in r.stdout and "docs drift 1" in r.stdout, r.stdout + r.stderr
+    assert r.stderr.count("claims: ") == 2 and "not valid YAML" in r.stderr, r.stderr
     assert os.path.exists(os.path.join(out, "STATE.json")) and open(os.path.join(out, "STATE.md")).read().startswith("# STATE — observed")
     r = subprocess.run([sys.executable, os.path.join(ROOT, "claims.py"), "--root", tmp, "--only", "version"], capture_output=True, text=True, env=env)
     one = json.loads(r.stdout)

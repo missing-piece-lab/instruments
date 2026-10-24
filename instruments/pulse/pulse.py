@@ -67,8 +67,13 @@ def load_config(path):
     return cfg
 
 
+LOGGING = True                                             # main() turns it off on --dry-run: nothing is written, not even the log
+
+
 def log(cfg, msg):
     """The log the human may read and the agent may stumble on: a read happened, never what it said."""
+    if not LOGGING:
+        return
     os.makedirs(os.path.dirname(cfg["log"]) or ".", exist_ok=True)
     with open(cfg["log"], "a", encoding="utf-8") as f:
         f.write(f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
@@ -95,6 +100,9 @@ def identity_text(cfg, day):
             rc, txt = sh(["git", "-C", d, "show", f"{rev}:./{name}"])
             if rc == 0:
                 return txt, rev[:12]
+        rc, shallow = sh(["git", "-C", d, "rev-parse", "--is-shallow-repository"])
+        if rc == 0 and shallow.strip() == "true":
+            print(f"pulse: {day} read from the working tree — a shallow clone has no history (git fetch --unshallow)", file=sys.stderr)
     try:
         return open(path, encoding="utf-8").read(), "worktree"
     except OSError:
@@ -287,7 +295,9 @@ def main(argv):
         days = [today]
     else:
         end = datetime.strptime(opt("--day"), "%Y-%m-%d").date() if opt("--day") else today - timedelta(days=1)
-        n = int(opt("--backfill", 0)); days = [end - timedelta(days=i) for i in range(n, -1, -1)]
+        n = max(int(opt("--backfill", 1)), 1); days = [end - timedelta(days=i) for i in range(n - 1, -1, -1)]   # N days, ending on `end`
+    global LOGGING
+    LOGGING = "--dry-run" not in argv
     do_judge = "--no-judge" not in argv and ("--today" not in argv or "--judge" in argv)   # the running day is judged only on request
     for d in days:
         path, data = pulse(cfg, d, do_judge=do_judge, rejudge="--rejudge" in argv)

@@ -5,7 +5,7 @@ description = "Four small instruments for a human-AI working pair: observed stat
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Kevin" }, { name = "Ariah" }]
+authors = [{ name = "the missing-piece-lab authors" }]
 dependencies = ["pyyaml>=6.0"]
 
 [tool.pytest.ini_options]

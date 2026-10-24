@@ -19,7 +19,7 @@ cp examples/pulse.yml . && edit it                 # identity file, transcript d
 export PULSE_JUDGE_BASE_URL=https://…/v1 PULSE_JUDGE_API_KEY=…
 python pulse.py --day 2026-10-20                   # one day → pulse-out/2026-10-20.json
 python pulse.py                                    # yesterday (the human's day, in the configured tz)
-python pulse.py --backfill 7 --no-judge            # the two deterministic layers for the last week
+python pulse.py --backfill 7 --no-judge            # the last 7 days, the two deterministic layers only
 python pulse.py --today --dry-run                  # print, write nothing; the running day is judged only with --judge
 ```
 
@@ -30,7 +30,7 @@ base URL and key come from the env and are never printed. `examples/` has a conf
 ## The Goodhart wall
 
 The output directory is the one place the read lands. The agent's prompt, memory and recall never include it. stdout and
-the log carry the deterministic numbers and the words `judge: present` — never the verdict, never a score. The human
+the log (not written on --dry-run) carry the deterministic numbers and the words `judge: present` — never the verdict, never a score. The human
 reads the directory weekly, direction over level, and says what they hear. This is the whole instrument; the code is the
 smaller part.
 
@@ -44,6 +44,7 @@ smaller part.
 - **The log says a read happened, nothing else** (2026-09-26, after a leak on 2026-10-02 when a one-line summary with the
   verdict landed in a log the agent reads). `one_line()` and the log are written to be safe to stumble on.
 - **A day with fewer than `min_messages` is not judged** (2026-09-24). Three messages do not have a register.
+- **Days are the human's days** (2026-09-23). `tz` is config (default UTC); a day runs midnight to midnight in that zone.
 - **The identity is read as it stood that day** (2026-09-24). If the identity file is tracked in git, a past day's substrate
   comes from the last commit on or before it, so a backfill measures what was actually in front of the agent.
 - **The agent's side only** (2026-09-23). The human's messages are counted, never sent to the judge.

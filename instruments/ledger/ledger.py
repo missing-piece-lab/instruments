@@ -170,13 +170,19 @@ def decide(d, rid, verb, text="", today=None):
     return close(d, rid, f"no — {text}", today)
 
 
-def apply(path, verb, rid, text="", today=None):
-    """load → decide → save under a lock (two doors may write the same file); returns the one-line result to show."""
+def locked(path, fn):
+    """load → fn(d) → save, under a file lock: two doors (a chat command, a web page) may write the same file. Unix-only (fcntl)."""
     with open(path + ".lock", "w") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
         d = load(path)
-        row = decide(d, rid, verb, text, today)
+        r = fn(d)
         save(d, path)
+    return r
+
+
+def apply(path, verb, rid, text="", today=None):
+    """decide under the lock; returns the one-line result to show."""
+    row = locked(path, lambda d: decide(d, rid, verb, text, today))
     verb = verb.strip().lower()
     if verb == "research":
         return f"{rid}: still open — research asked: {row['research']['question']}"
@@ -207,7 +213,7 @@ def main(argv):
         return 0
     try:
         if argv[0] == "close" and len(argv) >= 3:
-            r = close(d, argv[1], argv[2]); save(d, path); print(f"closed {r['id']}: {r['outcome']}"); return 0
+            r = locked(path, lambda d: close(d, argv[1], argv[2])); print(f"closed {r['id']}: {r['outcome']}"); return 0
         if argv[0] == "decide" and len(argv) >= 3:
             print(apply(path, argv[2], argv[1], " ".join(argv[3:]))); return 0
     except ValueError as e:
