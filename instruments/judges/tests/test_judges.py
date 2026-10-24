@@ -154,6 +154,15 @@ def test_inflight_and_head_lag():
     assert J.review("feature", r, "main", [], out, expect_head=head(r)[:12]) == "MERGE"
 
 
+def test_status_reads_only_its_own_label():
+    import tempfile
+    out = tempfile.mkdtemp()
+    open(os.path.join(out, "2026-10-24-100000-feature-" + "a" * 12 + ".md"), "w").write("# Cold read — `feature` → `main` · MERGE\n- head " + "a" * 40 + "\n")
+    open(os.path.join(out, "2026-10-24-110000-feature-x-" + "b" * 12 + ".md"), "w").write("# Cold read — `feature-x` → `main` · HOLD\n- head " + "b" * 40 + "\n")
+    assert J.last_read(out, "feature")["verdict"] == "MERGE" and J.last_read(out, "feature-x")["verdict"] == "HOLD", "a longer label never shadows a shorter one"
+    assert J.last_read(out, "feat") is None
+
+
 def test_cli_and_status():
     r, out, g = repo(); reset()
     py = [sys.executable, os.path.join(ROOT, "judges.py")]

@@ -51,6 +51,9 @@ merges: fetch before, and let your merge step call `status` so it merges only th
   the fix commit was refused as a "third round". Now a read leaves an `.inflight-<label>-<sha12>` marker (atomic create,
   stale after 20 minutes, cleared only by its owner), and **a round is a distinct commit**: two HOLDs on one sha are one.
 - **Errors never carry the key or the response body** (2026-10-11). An error body can echo the request.
+- **`status` matches the exact label** (2026-10-24, from the pair's own read of this repo). The file glob let `feature`
+  pick up the newest read of `feature-x`, so a branch that was read showed as unread. Safe direction, wrong answer; the
+  filename is now matched to the end.
 
 What was cut for this version: the forge API (open PRs, mergeability, merging through the forge), the budget guard that
 backs the lane off when the account is near its cap, and the first judge running on a CLI subscription rather than the

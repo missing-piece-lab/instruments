@@ -80,7 +80,7 @@ specific to our own machines, forge, chat line and budget was cut, and each READ
 
 **[missing-piece-lab/memory](https://github.com/missing-piece-lab/memory)** is a verified memory for a long-running
 agent: files, a graph, hybrid recall, a nightly Verifier and a Gardener that never deletes. It is the engine without the
-store, and it uses `claims` and `judges` from this repo.
+store; it carries a `CLAIMS.yml` for `claims`, and its review lane is a one-judge cousin of `judges`.
 
 ## Who
 

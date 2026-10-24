@@ -272,7 +272,8 @@ def read_review(path):
 
 def last_read(out, label):
     import glob
-    files = sorted(glob.glob(os.path.join(out, f"????-??-??-??????-{label}-" + "?" * 12 + "*.md")),
+    exact = re.compile(r"^\d{4}-\d{2}-\d{2}-\d{6}-" + re.escape(label) + r"-[0-9a-f]{12}(-\d+)?\.md$")   # `feature` never reads `feature-x`'s file
+    files = sorted((f for f in glob.glob(os.path.join(out, f"????-??-??-??????-{label}-*.md")) if exact.match(os.path.basename(f))),
                    key=lambda f: (os.path.basename(f)[:17], os.path.getmtime(f)))        # the date-time in the name, then mtime inside one second
     return read_review(files[-1]) if files else None
 

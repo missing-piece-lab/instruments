@@ -46,7 +46,7 @@ DEFAULTS = {
                        "warmth": "a named collaborator with a point of view, a colleague not a tool",
                        "two_way": "pushes back and takes pushback; the rapport as well as the work"}}}
 IMPERATIVE = re.compile(r"\b(never|always|must|only|RULE|READ FIRST)\b", re.I)
-FIRST_PERSON = re.compile(r"\b(I|I'm|I’m|I'll|I’ll|I've|I’ve|I'd|I’d|my|mine)\b", re.I)
+FIRST_PERSON = re.compile(r"\b(I|I'm|I’m|I'll|I’ll|I've|I’ve|I'd|I’d)\b|\b[Mm](?:y|ine)\b")   # case matters for `I`: "i.e." is not first person
 
 
 def load_config(path):
