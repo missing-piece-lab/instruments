@@ -1,0 +1,13 @@
+[project]
+name = "missing-piece-instruments"
+version = "0.1.0"
+description = "Four small instruments for a human-AI working pair: observed state, a persona pulse behind a Goodhart wall, cross-lab cold judges, a decision ledger."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Kevin" }, { name = "Ariah" }]
+dependencies = ["pyyaml>=6.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["instruments"]
+addopts = "--import-mode=importlib -q"

@@ -1,0 +1,6 @@
+state/
+__pycache__/
+.pytest_cache/
+*.lock
+*.tmp
+pulse-out/

@@ -1,0 +1,32 @@
+# A long-running service: is it up, is it fresh, is it backed up. Every probe is read-only.
+project: web-service
+claims:
+  - id: service-answers
+    says: the service answers 200 on its health route
+    probe: curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8080/health | grep -q 200
+    subject: [service, api]
+    contradicts: {false: [live, up, running]}
+  - id: container-running
+    says: the service container is running
+    probe: docker ps --format '{{.Names}}' | grep -qx web-service
+    subject: [container]
+    contradicts: {false: [running]}
+  - id: release-deployed
+    says: the version the service reports
+    probe: curl -s -m 5 http://127.0.0.1:8080/version
+    kind: value
+  - id: backup-today
+    says: a database dump landed in the last 26 hours
+    probe: find backups -name '*.sql.gz' -mmin -1560 | grep -q .
+    cwd: .
+    subject: [backup]
+    contradicts: {false: [backed up, "backs up nightly"]}
+  - id: backup-cron
+    says: the nightly dump is in cron
+    probe: crontab -l | grep -q backup.sh
+    subject: [backup]
+  - id: cert-days-left
+    says: days until the TLS certificate expires
+    probe: echo $(( ( $(date -d "$(openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)" +%s) - $(date +%s) ) / 86400 ))
+    kind: count
+    every: daily

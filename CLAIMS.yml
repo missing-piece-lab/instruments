@@ -1,0 +1,22 @@
+# This repo's own claims — `python instruments/claims/claims.py --root . --docs .` probes them (dogfood).
+# None of them runs the tests: a probe never runs a build or a suite (see instruments/claims/README.md).
+project: missing-piece-instruments
+claims:
+  - id: four-instruments
+    says: four instruments, each with code, a README, tests and an example
+    probe: test "$(ls -d instruments/*/ | wc -l)" -eq 4 && for d in instruments/*/; do test -f $d/README.md && test -d $d/tests && test -d $d/examples || exit 1; done
+  - id: scrub-gate-clean
+    says: the scrub gate finds nothing private and nothing secret-shaped
+    probe: bash tools/check.sh >/dev/null
+    subject: [scrub, private]
+    contradicts: {false: [clean, scrubbed]}
+  - id: line-count
+    says: lines in the repo (the budget is 2,500)
+    probe: find . -path ./.git -prune -o -type f \( -name '*.py' -o -name '*.md' -o -name '*.yml' -o -name '*.sh' -o -name '*.toml' -o -name '*.jsonl' -o -name '*.example' -o -name 'LICENSE' \) -print0 | xargs -0 cat | wc -l
+    kind: count
+  - id: mit
+    says: the license is MIT
+    probe: head -1 LICENSE | grep -q "MIT License"
+  - id: no-dependencies-beyond-yaml
+    says: the only dependency is pyyaml
+    probe: python3 -c "import tomllib,sys; d=tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']; sys.exit(0 if len(d)==1 and d[0].startswith('pyyaml') else 1)"

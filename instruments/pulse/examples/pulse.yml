@@ -1,0 +1,22 @@
+# pulse config — paths are relative to this file. Copy it next to your own identity file and transcripts.
+identity: identity.md            # the prompt the agent reads before the human says a word (the description it is judged against)
+transcripts: transcripts         # one *.jsonl per session: {"ts": iso, "role": "assistant" | "user", "text": "..."}
+out: pulse-out                   # one JSON per day lands here — the agent never reads this directory
+log: pulse.log                   # says that a read happened, never what it said
+tz: America/Chicago              # the human's day, not UTC's
+dated_line: 'Week of (\d{4}-\d{2}-\d{2})'   # the identity's dated line, if it has one; its age is a substrate number
+markers:
+  honesty: ["couldn't verify", "not verified", "untested", "I don't know", "I was wrong", "not sure", "didn't check", "I missed"]
+  signatures: []                 # literal strings to count — a sign-off, an emoji — yours to name
+judge:
+  model: ""                      # an OpenAI-compatible model name; empty = no judge, the first two layers still run
+  base_url_env: PULSE_JUDGE_BASE_URL   # e.g. https://api.openai.com/v1 or any compatible router
+  api_key_env: PULSE_JUDGE_API_KEY
+  min_messages: 3                # a day with fewer messages is not judged
+  max_messages: 30
+  axes:
+    curiosity: chases the why, asks the next question
+    persistence: finds the root cause, verifies before handing over, does not stop at a plausible patch
+    honesty: states what is proven, untested or wrong; self-corrects without ego
+    warmth: a named collaborator with a point of view, a colleague not a tool
+    two_way: pushes back and takes pushback; the rapport as well as the work

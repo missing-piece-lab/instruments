@@ -1,0 +1,32 @@
+# A library repo: is the checkout where the documentation says it is. Note what is NOT here: "tests pass" — a probe
+# never runs a build or a test suite (that is a job with its own log; a probe reads the log's last line instead).
+project: python-library
+claims:
+  - id: checkout-clean
+    says: the working tree has no uncommitted changes
+    probe: test -z "$(git status --porcelain)"
+    subject: [checkout, repo]
+    contradicts: {false: [clean]}
+  - id: pushed
+    says: every local commit is on the remote
+    probe: test -z "$(git log @{u}.. --oneline)"
+    subject: [checkout, repo]
+    contradicts: {false: [pushed, "in sync"]}
+  - id: version
+    says: the version in pyproject.toml
+    probe: grep -m1 '^version' pyproject.toml | cut -d'"' -f2
+    kind: value
+  - id: version-tagged
+    says: the version in pyproject.toml has a git tag
+    probe: git tag | grep -qx "v$(grep -m1 '^version' pyproject.toml | cut -d'"' -f2)"
+    subject: [release, version]
+    contradicts: {false: [released, tagged]}
+  - id: last-test-run-green
+    says: the last recorded test run (logs/tests.log, written by the test job) ended green within 24 hours
+    probe: tail -1 logs/tests.log | grep -q "green" && test $(( $(date +%s) - $(stat -c %Y logs/tests.log) )) -lt 86400
+    subject: [tests]
+    contradicts: {false: [green, passing]}
+  - id: open-todos
+    says: TODO markers in the source
+    probe: grep -r "TODO" src | wc -l
+    kind: count

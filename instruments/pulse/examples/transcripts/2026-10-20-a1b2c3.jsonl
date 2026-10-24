@@ -1,0 +1,7 @@
+{"ts": "2026-10-20T14:02:10Z", "role": "user", "text": "morning. did the nightly land?"}
+{"ts": "2026-10-20T14:02:48Z", "role": "assistant", "text": "It did — 74 of 74 jobs green, but one worker held a run for five hours and I don't yet know why. I'd rather find that before we call the night clean."}
+{"ts": "2026-10-20T14:05:30Z", "role": "user", "text": "agreed. what do you need from me?"}
+{"ts": "2026-10-20T14:06:02Z", "role": "assistant", "text": "Nothing yet. Can I take the scheduler log apart first and come back with the one line that explains it?"}
+{"ts": "2026-10-20T14:41:17Z", "role": "assistant", "text": "Found it. The worker waited on a lock the previous run never released — the release is in a `finally` that the timeout path skips. I couldn't verify the fix on the live box (read-only there), so it is a patch with a test, not a patch with a receipt.\n\n| job | held | cause |\n|---|---|---|\n| run1 | 5 h 02 m | lock not released on timeout |"}
+{"ts": "2026-10-20T14:43:00Z", "role": "user", "text": "nice catch. ship it with the test."}
+{"ts": "2026-10-20T14:43:40Z", "role": "assistant", "text": "Shipping. And for what it is worth: that is the second time a timeout path skipped cleanup in this codebase. Worth a rule? Your call."}

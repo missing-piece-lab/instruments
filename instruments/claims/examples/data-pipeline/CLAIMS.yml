@@ -1,0 +1,36 @@
+# A nightly pipeline: did it run, what did it produce, is the output fresh. Counts and values, never rows.
+project: data-pipeline
+claims:
+  - id: ran-last-night
+    says: the pipeline's log has a run that finished in the last 26 hours
+    probe: test -n "$(find logs -name 'run-*.log' -mmin -1560 | head -1)"
+    subject: [pipeline, nightly]
+    contradicts: {false: [nightly, "runs every night", scheduled]}
+  - id: last-run-status
+    says: the last line of the newest run log
+    probe: tail -1 "$(ls -t logs/run-*.log | head -1)"
+    kind: value
+  - id: output-fresh
+    says: the output table was rewritten in the last 26 hours
+    probe: test $(( $(date +%s) - $(stat -c %Y output/table.parquet) )) -lt 93600
+    subject: [output, table]
+    contradicts: {false: [fresh, current]}
+  - id: output-rows
+    says: rows in the output table (a count, never the rows)
+    probe: python3 -c "import pyarrow.parquet as pq; print(pq.ParquetFile('output/table.parquet').metadata.num_rows)"
+    kind: count
+  - id: output-rows-floor
+    says: the output table holds at least as many rows as yesterday's (the floor is written by the pipeline, read here)
+    probe: test "$(python3 -c "import pyarrow.parquet as pq; print(pq.ParquetFile('output/table.parquet').metadata.num_rows)")" -ge "$(cat state/rows-floor)"
+    subject: [output, table]
+  - id: scheduled
+    says: the pipeline is in cron
+    probe: crontab -l | grep -q pipeline/run.sh
+    subject: [pipeline, nightly]
+    contradicts: {false: [scheduled, armed]}
+  - id: upstream-reachable
+    says: the source database answers (probed once an hour — the connection is metered)
+    probe: pg_isready -h 127.0.0.1 -p 5432 -q
+    every: 1h
+    subject: [upstream, source]
+    contradicts: {false: [reachable]}

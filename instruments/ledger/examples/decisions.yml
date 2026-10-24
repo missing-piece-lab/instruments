@@ -1,0 +1,44 @@
+# The decision ledger — the only list of what is waiting on the human.
+# open rows: id · asked · what · line · door (one-way | two-way) · by · default (two-way only) · recommend · source · research
+# two-way: the default is owed when `by` passes (the row shows OVERDUE; `decide <id> default` records it). one-way: waits, never defaults.
+# Partly machine-written: ledger.py rewrites this file on every decide/close, so comments below this header do not survive.
+open:
+- id: identity-rewrite
+  asked: 2026-10-20
+  what: let the agent rewrite its own identity file's "how we work" section (it touches who the agent is — a one-way door)
+  line: say "yes, rewrite it" or "no"
+  door: one-way
+  by: 2026-10-27
+  recommend: yes, with the diff read cold by both judges first
+  source: the weekly review, 2026-10-20
+- id: lock-fix-merge
+  asked: 2026-10-21
+  what: merge the scheduler lock fix (both judges said MERGE)
+  line: say merge, or merge it yourself
+  door: two-way
+  by: 2026-10-28
+  default: merge through the lane and restart the scheduler
+  recommend: merge; the test covers the timeout path that bit us twice
+  source: the cold read of 2026-10-21
+- id: second-judge-model
+  asked: 2026-10-22
+  what: which model sits in the second judge's seat for November (a spend — one-way)
+  line: name the model
+  door: one-way
+  by: 2026-11-01
+  recommend: keep the current one; its split rate against the first judge is the useful kind
+  source: the ledger's October rows
+  research:
+    asked: 2026-10-23
+    question: how often did the second judge split from the first in October, and was the split right?
+    status: pending
+closed:
+- id: review-rules-v2
+  asked: 2026-10-14
+  what: adopt the four review rules as the lane's rules file
+  line: say yes
+  door: two-way
+  by: 2026-10-18
+  default: adopt them
+  decided: 2026-10-17
+  outcome: yes — 10-17
