@@ -46,8 +46,8 @@ Python 3.11+ and one dependency. Each instrument is a single file you can copy o
 git clone https://github.com/missing-piece-lab/instruments && cd instruments
 pip install pyyaml
 
-python tests/run.py                                    # all tests, offline, then the scrub gate
-python instruments/claims/claims.py --root . --docs .  # the repo probing its own claims
+python tests/run.py                                    # tests + the scrub gate
+python instruments/claims/claims.py --root . --docs .  # the repo probes its claims
 ```
 
 `python -m pytest` runs the same tests if you have pytest. Each `instruments/<name>/README.md` says what the tool is,
