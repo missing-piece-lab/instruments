@@ -79,7 +79,7 @@ def test_markers_and_sampling():
     assert b["messages"] == 3 and b["human_messages"] == 2 and b["first_person_share"] == 66.7 and b["table_rows_per_msg"] == 1.0, b
     assert b["questions_share"] == 33.3 and b["honesty_markers"] == 1 and b["sig:~fin"] == 1, b
     assert P.markers_of(cfg, [], [])["messages"] == 0
-    assert P.FIRST_PERSON.search("see i.e. the note, and iPhone") is None and P.FIRST_PERSON.search("That one is mine.") and P.FIRST_PERSON.search("I did")
+    assert P.FIRST_PERSON.search("see i.e. the note, and i'm not counted lowercase") is None and P.FIRST_PERSON.search("That one is mine.") and P.FIRST_PERSON.search("I did")
     cfg["judge"]["max_messages"] = 2; sm = P.sample(cfg, msgs); assert len(sm) == 2 and sm[0]["text"].startswith("I co") and "ts" in sm[0]
     cfg["judge"]["max_messages"] = 30; cfg["judge"]["total_chars"] = 40; assert len(P.sample(cfg, msgs)) == 1, "the total cap stops the sample, never below one"
     assert P.day_messages(cfg, day + timedelta(days=5))[0] == []

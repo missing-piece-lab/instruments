@@ -48,6 +48,8 @@ smaller part.
 - **The identity is read as it stood that day** (2026-09-24). If the identity file is tracked in git, a past day's substrate
   comes from the last commit on or before it, so a backfill measures what was actually in front of the agent.
 - **The agent's side only** (2026-09-23). The human's messages are counted, never sent to the judge.
+- **`I` is case-sensitive** (2026-10-24). A lone lowercase `i` ("i.e.") counted as first person; now the `I` forms match
+  by case and `my`/`mine` either way. `first_person_share` is not comparable across this date.
 
 What was cut for this version: per-lane measurement (the interactive seat, the unattended jobs, the always-on process each
 measured apart), the per-model split within a lane, and reading the agent runtime's own transcript format directly.
